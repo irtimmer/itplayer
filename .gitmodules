@@ -1,0 +1,3 @@
+[submodule "nfs"]
+	path = nfs
+	url = https://github.com/irtimmer/networkfs.git
