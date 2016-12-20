@@ -74,7 +74,7 @@ public class BrowserFragment extends VerticalGridFragment implements OnItemViewC
 
     protected void loadData(String path) throws IOException {
         List<MediaFile> list = browser.listFiles(path);
-        rowsAdapter = new ArrayObjectAdapter(new CardPresenter());
+        rowsAdapter = new ArrayObjectAdapter(new CardPresenter(browser));
         rowsAdapter.addAll(0, list);
 
         setOnItemViewClickedListener(this);

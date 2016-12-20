@@ -24,6 +24,10 @@ import android.support.v17.leanback.widget.Presenter;
 import android.util.Log;
 import android.view.ViewGroup;
 
+import com.bumptech.glide.Glide;
+
+import nl.itimmer.itplayer.glide.StreamNfsLoader;
+
 /*
  * A CardPresenter is used to generate Views and bind Objects to them on demand.
  * It contains an Image CardView
@@ -35,6 +39,12 @@ public class CardPresenter extends Presenter {
     private static final int CARD_HEIGHT = 176;
     private static int selectedBackgroundColor;
     private static int defaultBackgroundColor;
+
+    private Browser browser;
+
+    public CardPresenter(Browser browser) {
+        this.browser = browser;
+    }
 
     private static void updateCardBackgroundColor(ImageCardView view, boolean selected) {
         int color = selected ? selectedBackgroundColor : defaultBackgroundColor;
@@ -73,10 +83,23 @@ public class CardPresenter extends Presenter {
         Log.d(TAG, "onBindViewHolder");
         cardView.setTitleText(media.getName());
         cardView.setMainImageDimensions(CARD_WIDTH, CARD_HEIGHT);
+
+        if (media.getCardImagePath() != null) {
+            cardView.setMainImageDimensions(CARD_WIDTH, CARD_HEIGHT);
+            Glide.with(viewHolder.view.getContext())
+                    .using(new StreamNfsLoader(browser.getContext()))
+                    .load(media.getCardImagePath())
+                    .centerCrop()
+                    .into(cardView.getMainImageView());
+        }
     }
 
     @Override
     public void onUnbindViewHolder(Presenter.ViewHolder viewHolder) {
         Log.d(TAG, "onUnbindViewHolder");
+        ImageCardView cardView = (ImageCardView) viewHolder.view;
+        // Remove references to images so that the garbage collector can free up memory
+        cardView.setBadgeImage(null);
+        cardView.setMainImage(null);
     }
 }
