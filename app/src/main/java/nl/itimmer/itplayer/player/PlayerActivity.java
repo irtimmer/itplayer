@@ -20,6 +20,9 @@
 package nl.itimmer.itplayer.player;
 
 import android.app.Activity;
+import android.media.MediaMetadata;
+import android.media.session.MediaSession;
+import android.media.session.PlaybackState;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
@@ -27,9 +30,12 @@ import android.support.v17.leanback.app.VideoFragment;
 import android.support.v17.leanback.app.VideoFragmentGlueHost;
 
 import com.google.android.exoplayer2.DefaultLoadControl;
+import com.google.android.exoplayer2.ExoPlaybackException;
+import com.google.android.exoplayer2.ExoPlayer;
 import com.google.android.exoplayer2.ExoPlayerFactory;
 import com.google.android.exoplayer2.LoadControl;
 import com.google.android.exoplayer2.SimpleExoPlayer;
+import com.google.android.exoplayer2.Timeline;
 import com.google.android.exoplayer2.extractor.DefaultExtractorsFactory;
 import com.google.android.exoplayer2.extractor.ExtractorsFactory;
 import com.google.android.exoplayer2.source.ExtractorMediaSource;
@@ -50,7 +56,7 @@ import nl.itimmer.itplayer.Config;
 import nl.itimmer.itplayer.MediaFile;
 import nl.itimmer.itplayer.R;
 
-public class PlayerActivity extends Activity {
+public class PlayerActivity extends Activity implements ExoPlayer.EventListener {
 
     private static final String TAG = "PlayerActivity";
 
@@ -64,6 +70,8 @@ public class PlayerActivity extends Activity {
     private Browser browser;
 
     private VideoFragment videoFragment;
+
+    private MediaSession session;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -81,8 +89,18 @@ public class PlayerActivity extends Activity {
         TrackSelector trackSelector = new DefaultTrackSelector(mainHandler, videoTrackSelectionFactory);
         LoadControl loadControl = new DefaultLoadControl();
         player = ExoPlayerFactory.newSimpleInstance(this, trackSelector, loadControl);
+        player.addListener(this);
+
         glueHelper = new ExoPlayerGlue(player, this);
         glueHelper.setHost(glueHost);
+
+        session = new MediaSession(this, "ITPlayer");
+        session.setCallback(new ExoPlayerMediaSessionCalback(player));
+        session.setFlags(MediaSession.FLAG_HANDLES_MEDIA_BUTTONS | MediaSession.FLAG_HANDLES_TRANSPORT_CONTROLS);
+        session.setActive(true);
+
+        MediaMetadata.Builder metaBuilder = new MediaMetadata.Builder();
+        session.setMetadata(metaBuilder.build());
 
         try {
             browser = Browser.getInstance(Config.mountDirectory);
@@ -98,9 +116,69 @@ public class PlayerActivity extends Activity {
     }
 
     @Override
+    public void onPause() {
+        super.onPause();
+        if (player.getPlayWhenReady() && player.getPlaybackState() == ExoPlayer.STATE_READY) {
+            if (!requestVisibleBehind(true))
+                player.setPlayWhenReady(false);
+        } else
+            requestVisibleBehind(false);
+    }
+
+    @Override
+    public void onVisibleBehindCanceled() {
+        player.setPlayWhenReady(false);
+        super.onVisibleBehindCanceled();
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        session.setActive(true);
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        session.release();
+    }
+
+    @Override
     public void onDestroy() {
         super.onDestroy();
         player.release();
     }
 
+    @Override
+    public void onLoadingChanged(boolean isLoading) {
+
+    }
+
+    @Override
+    public void onPlayerStateChanged(boolean playWhenReady, int playbackState) {
+        PlaybackState.Builder stateBuilder = new PlaybackState.Builder();
+        stateBuilder.setState(playWhenReady ? PlaybackState.STATE_PLAYING : PlaybackState.STATE_PAUSED, player.getCurrentPosition(), 1.0f);
+
+        long actions = PlaybackState.ACTION_PLAY;
+        if (playWhenReady)
+            actions |= PlaybackState.ACTION_PAUSE;
+
+        stateBuilder.setActions(actions);
+        session.setPlaybackState(stateBuilder.build());
+    }
+
+    @Override
+    public void onTimelineChanged(Timeline timeline, Object manifest) {
+
+    }
+
+    @Override
+    public void onPlayerError(ExoPlaybackException error) {
+
+    }
+
+    @Override
+    public void onPositionDiscontinuity() {
+
+    }
 }
