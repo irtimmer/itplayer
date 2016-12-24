@@ -80,8 +80,8 @@ public class PlayerActivity extends Activity {
         TrackSelection.Factory videoTrackSelectionFactory = new AdaptiveVideoTrackSelection.Factory(bandwidthMeter);
         TrackSelector trackSelector = new DefaultTrackSelector(mainHandler, videoTrackSelectionFactory);
         LoadControl loadControl = new DefaultLoadControl();
-        player = ExoPlayerFactory.newSimpleInstance(getBaseContext(), trackSelector, loadControl);
-        glueHelper = new ExoPlayerGlue(player, getBaseContext());
+        player = ExoPlayerFactory.newSimpleInstance(this, trackSelector, loadControl);
+        glueHelper = new ExoPlayerGlue(player, this);
         glueHelper.setHost(glueHost);
 
         try {
