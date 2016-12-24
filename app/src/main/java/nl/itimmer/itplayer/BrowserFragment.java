@@ -22,6 +22,7 @@ package nl.itimmer.itplayer;
 import java.io.IOException;
 import java.util.List;
 
+import android.content.Intent;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.v17.leanback.app.VerticalGridFragment;
@@ -33,6 +34,8 @@ import android.support.v17.leanback.widget.Row;
 import android.support.v17.leanback.widget.RowPresenter;
 import android.support.v17.leanback.widget.VerticalGridPresenter;
 import android.util.Log;
+
+import nl.itimmer.itplayer.player.PlayerActivity;
 
 public class BrowserFragment extends VerticalGridFragment implements OnItemViewClickedListener {
     private static final String TAG = "BrowserFragment";
@@ -95,6 +98,10 @@ public class BrowserFragment extends VerticalGridFragment implements OnItemViewC
             if (!media.isFile()) {
                 MainActivity activity = (MainActivity) getActivity();
                 activity.openDirectory(media.getPath());
+            } else {
+                Intent intent = new Intent(getActivity(), PlayerActivity.class);
+                intent.putExtra(PlayerActivity.MEDIA, media);
+                startActivity(intent);
             }
         }
     }
