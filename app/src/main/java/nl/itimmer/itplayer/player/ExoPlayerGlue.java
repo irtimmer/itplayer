@@ -21,7 +21,7 @@ package nl.itimmer.itplayer.player;
 
 import android.content.Context;
 import android.graphics.drawable.Drawable;
-import android.support.v17.leanback.app.PlaybackFragmentGlueHost;
+import android.os.Handler;
 import android.support.v17.leanback.media.PlaybackControlGlue;
 import android.support.v17.leanback.media.PlaybackGlueHost;
 import android.support.v17.leanback.media.SurfaceHolderGlueHost;
@@ -32,12 +32,16 @@ import com.google.android.exoplayer2.ExoPlayer;
 import com.google.android.exoplayer2.SimpleExoPlayer;
 import com.google.android.exoplayer2.Timeline;
 
-public class ExoPlayerGlue extends PlaybackControlGlue implements ExoPlayer.EventListener, SurfaceHolder.Callback {
+public class ExoPlayerGlue extends PlaybackControlGlue implements ExoPlayer.EventListener, SurfaceHolder.Callback, Runnable {
 
     private SimpleExoPlayer player;
 
+    private Handler handler;
+
     public ExoPlayerGlue(SimpleExoPlayer player, Context context) {
         super(context, new int[] {PLAYBACK_SPEED_NORMAL});
+        handler = new Handler();
+
         this.player = player;
         player.addListener(this);
     }
@@ -103,6 +107,20 @@ public class ExoPlayerGlue extends PlaybackControlGlue implements ExoPlayer.Even
         if (host instanceof SurfaceHolderGlueHost) {
             ((SurfaceHolderGlueHost) host).setSurfaceHolderCallback(this);
         }
+    }
+
+    @Override
+    public void enableProgressUpdating(boolean enable) {
+        if (enable)
+            handler.postDelayed(this, getUpdatePeriod());
+        else
+            handler.removeCallbacks(this);
+    }
+
+    @Override
+    public void run() {
+        updateProgress();
+        handler.postDelayed(this, getUpdatePeriod());
     }
 
     @Override
