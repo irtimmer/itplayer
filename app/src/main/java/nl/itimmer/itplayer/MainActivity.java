@@ -22,6 +22,7 @@ package nl.itimmer.itplayer;
 import android.app.Activity;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.support.v17.leanback.app.BackgroundManager;
 
 import java.io.IOException;
 
@@ -29,10 +30,15 @@ public class MainActivity extends Activity {
 
     public Browser browser;
 
+    private BackgroundManager backgroundManager;
+
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        backgroundManager = BackgroundManager.getInstance(this);
+        backgroundManager.attach(getWindow());
 
         AsyncTask.execute(new Runnable() {
             @Override
@@ -54,6 +60,10 @@ public class MainActivity extends Activity {
                 }
             }
         });
+    }
+
+    public BackgroundManager getBackgroundManager() {
+        return backgroundManager;
     }
 
     protected void openDirectory(String path) {

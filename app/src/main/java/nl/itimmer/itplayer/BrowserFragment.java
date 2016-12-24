@@ -21,28 +21,49 @@ package nl.itimmer.itplayer;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Timer;
+import java.util.TimerTask;
 
 import android.content.Intent;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.Handler;
+import android.support.v17.leanback.app.BackgroundManager;
 import android.support.v17.leanback.app.VerticalGridFragment;
 import android.support.v17.leanback.widget.ArrayObjectAdapter;
 import android.support.v17.leanback.widget.FocusHighlight;
 import android.support.v17.leanback.widget.OnItemViewClickedListener;
+import android.support.v17.leanback.widget.OnItemViewSelectedListener;
 import android.support.v17.leanback.widget.Presenter;
 import android.support.v17.leanback.widget.Row;
 import android.support.v17.leanback.widget.RowPresenter;
 import android.support.v17.leanback.widget.VerticalGridPresenter;
+import android.util.DisplayMetrics;
 import android.util.Log;
 
+import com.bumptech.glide.Glide;
+import com.bumptech.glide.load.resource.drawable.GlideDrawable;
+import com.bumptech.glide.request.animation.GlideAnimation;
+import com.bumptech.glide.request.target.SimpleTarget;
+
+import nl.itimmer.itplayer.glide.StreamNfsLoader;
 import nl.itimmer.itplayer.player.PlayerActivity;
 
-public class BrowserFragment extends VerticalGridFragment implements OnItemViewClickedListener {
+import static android.R.attr.width;
+
+public class BrowserFragment extends VerticalGridFragment implements OnItemViewClickedListener, OnItemViewSelectedListener {
     private static final String TAG = "BrowserFragment";
+
+    private static final int BACKGROUND_UPDATE_DELAY = 300;
 
     private ArrayObjectAdapter rowsAdapter;
     private Browser browser;
     private String path;
+
+    private Handler mainHandler;
+    private Timer backgroundTimer;
+    private BackgroundManager backgroundManager;
+    private DisplayMetrics metrics;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -51,6 +72,15 @@ public class BrowserFragment extends VerticalGridFragment implements OnItemViewC
         VerticalGridPresenter gridPresenter = new VerticalGridPresenter(FocusHighlight.ZOOM_FACTOR_MEDIUM);
         gridPresenter.setNumberOfColumns(4);
         setGridPresenter(gridPresenter);
+
+        setOnItemViewClickedListener(this);
+        setOnItemViewSelectedListener(this);
+
+        backgroundManager = ((MainActivity) getActivity()).getBackgroundManager();
+        metrics = new DisplayMetrics();
+        getActivity().getWindowManager().getDefaultDisplay().getMetrics(metrics);
+
+        mainHandler = new Handler(getContext().getMainLooper());
     }
 
     @Override
@@ -80,8 +110,6 @@ public class BrowserFragment extends VerticalGridFragment implements OnItemViewC
         rowsAdapter = new ArrayObjectAdapter(new CardPresenter(browser));
         rowsAdapter.addAll(0, list);
 
-        setOnItemViewClickedListener(this);
-
         //Update list on ui thread
         getActivity().runOnUiThread(new Runnable() {
             @Override
@@ -89,6 +117,19 @@ public class BrowserFragment extends VerticalGridFragment implements OnItemViewC
                 setAdapter(rowsAdapter);
             }
         });
+    }
+
+    @Override
+    public void onItemSelected(Presenter.ViewHolder itemViewHolder, Object item, RowPresenter.ViewHolder rowViewHolder, Row row) {
+        if (item instanceof MediaFile) {
+            MediaFile media = (MediaFile) item;
+
+            if (null != backgroundTimer) {
+                backgroundTimer.cancel();
+            }
+            backgroundTimer = new Timer();
+            backgroundTimer.schedule(new UpdateBackgroundTask(media.getBackgroundImagePath()), BACKGROUND_UPDATE_DELAY);
+        }
     }
 
     @Override
@@ -103,6 +144,34 @@ public class BrowserFragment extends VerticalGridFragment implements OnItemViewC
                 intent.putExtra(PlayerActivity.MEDIA, media);
                 startActivity(intent);
             }
+        }
+    }
+
+    private class UpdateBackgroundTask extends TimerTask {
+
+        private String url;
+
+        public UpdateBackgroundTask(String url) {
+            this.url = url;
+        }
+
+        @Override
+        public void run() {
+            mainHandler.post(new Runnable() {
+                @Override
+                public void run() {
+                    Glide.with(getActivity())
+                        .using(new StreamNfsLoader(browser.getContext()))
+                        .load(url)
+                        .centerCrop()
+                        .into(new SimpleTarget<GlideDrawable>(metrics.widthPixels, metrics.heightPixels) {
+                            @Override
+                            public void onResourceReady(GlideDrawable resource, GlideAnimation<? super GlideDrawable> glideAnimation) {
+                                backgroundManager.setDrawable(resource);
+                            }
+                        });
+                }
+            });
         }
     }
 }
