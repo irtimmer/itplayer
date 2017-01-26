@@ -24,6 +24,7 @@ import android.media.MediaMetadata;
 import android.media.session.MediaSession;
 import android.media.session.PlaybackState;
 import android.net.Uri;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
 import android.support.v17.leanback.app.VideoFragment;
@@ -40,6 +41,7 @@ import com.google.android.exoplayer2.extractor.DefaultExtractorsFactory;
 import com.google.android.exoplayer2.extractor.ExtractorsFactory;
 import com.google.android.exoplayer2.source.ExtractorMediaSource;
 import com.google.android.exoplayer2.source.MediaSource;
+import com.google.android.exoplayer2.source.MergingMediaSource;
 import com.google.android.exoplayer2.trackselection.AdaptiveVideoTrackSelection;
 import com.google.android.exoplayer2.trackselection.DefaultTrackSelector;
 import com.google.android.exoplayer2.trackselection.TrackSelection;
@@ -53,8 +55,8 @@ import java.io.IOException;
 
 import nl.itimmer.itplayer.Browser;
 import nl.itimmer.itplayer.Config;
-import nl.itimmer.itplayer.MediaFile;
 import nl.itimmer.itplayer.R;
+import nl.itimmer.itplayer.vfs.MediaFile;
 
 public class PlayerActivity extends Activity implements ExoPlayer.EventListener {
 
@@ -102,17 +104,7 @@ public class PlayerActivity extends Activity implements ExoPlayer.EventListener 
         MediaMetadata.Builder metaBuilder = new MediaMetadata.Builder();
         session.setMetadata(metaBuilder.build());
 
-        try {
-            browser = Browser.getInstance(Config.mountDirectory);
-            DataSource.Factory dataSourceFactory = new NfsDataSourceFactory(browser.getContext());
-            ExtractorsFactory extractorsFactory = new DefaultExtractorsFactory();
-            MediaSource videoSource = new ExtractorMediaSource(Uri.parse("nfs://" + media.getSize() + "/" + media.getPath()), dataSourceFactory, extractorsFactory, null, null);
-
-            player.prepare(videoSource);
-            player.setPlayWhenReady(true);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        new SourceTask().execute(media);
     }
 
     @Override
@@ -180,5 +172,33 @@ public class PlayerActivity extends Activity implements ExoPlayer.EventListener 
     @Override
     public void onPositionDiscontinuity() {
 
+    }
+
+    class SourceTask extends AsyncTask<MediaFile, Void, MediaSource[]> {
+
+        @Override
+        protected MediaSource[] doInBackground(MediaFile... media) {
+            try {
+                browser = Browser.getInstance(Config.mountDirectory);
+
+                DataSource.Factory dataSourceFactory = new NfsDataSourceFactory(browser.getContext());
+                ExtractorsFactory extractorsFactory = new DefaultExtractorsFactory();
+                MediaSource videoSource = new ExtractorMediaSource(Uri.parse("nfs://" + media[0].getSize() + "/" + media[0].getPath()), dataSourceFactory, extractorsFactory, null, null);
+
+                return new MediaSource[]{videoSource};
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
+            return null;
+        }
+
+        @Override
+        protected void onPostExecute(MediaSource... sources) {
+            if (sources != null) {
+                player.prepare(new MergingMediaSource(sources));
+                player.setPlayWhenReady(true);
+            }
+        }
     }
 }

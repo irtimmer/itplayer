@@ -48,8 +48,7 @@ import com.bumptech.glide.request.target.SimpleTarget;
 
 import nl.itimmer.itplayer.glide.StreamNfsLoader;
 import nl.itimmer.itplayer.player.PlayerActivity;
-
-import static android.R.attr.width;
+import nl.itimmer.itplayer.vfs.Media;
 
 public class BrowserFragment extends VerticalGridFragment implements OnItemViewClickedListener, OnItemViewSelectedListener {
     private static final String TAG = "BrowserFragment";
@@ -106,7 +105,7 @@ public class BrowserFragment extends VerticalGridFragment implements OnItemViewC
     }
 
     protected void loadData(String path) throws IOException {
-        List<MediaFile> list = browser.listFiles(path);
+        List<Media> list = browser.listFiles(path);
         rowsAdapter = new ArrayObjectAdapter(new CardPresenter(browser));
         rowsAdapter.addAll(0, list);
 
@@ -121,8 +120,8 @@ public class BrowserFragment extends VerticalGridFragment implements OnItemViewC
 
     @Override
     public void onItemSelected(Presenter.ViewHolder itemViewHolder, Object item, RowPresenter.ViewHolder rowViewHolder, Row row) {
-        if (item instanceof MediaFile) {
-            MediaFile media = (MediaFile) item;
+        if (item instanceof Media) {
+            Media media = (Media) item;
 
             if (null != backgroundTimer) {
                 backgroundTimer.cancel();
@@ -134,8 +133,8 @@ public class BrowserFragment extends VerticalGridFragment implements OnItemViewC
 
     @Override
     public void onItemClicked(Presenter.ViewHolder itemViewHolder, Object item, RowPresenter.ViewHolder rowViewHolder, Row row) {
-        if (item instanceof MediaFile) {
-            final MediaFile media = (MediaFile) item;
+        if (item instanceof Media) {
+            final Media media = (Media) item;
             if (!media.isFile()) {
                 MainActivity activity = (MainActivity) getActivity();
                 activity.openDirectory(media.getPath());

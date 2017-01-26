@@ -1,7 +1,7 @@
 /*
  * This file is part of ITPlayer.
  *
- * Copyright (C) 2016 Iwan Timmer
+ * Copyright (C) 2016, 2017 Iwan Timmer
  *
  * ITPlayer is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,6 +24,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.WeakHashMap;
 
+import nl.itimmer.itplayer.vfs.Media;
+import nl.itimmer.itplayer.vfs.MediaFile;
 import nl.itimmer.networkfs.nfs.NfsContext;
 import nl.itimmer.networkfs.nfs.NfsFile;
 
@@ -49,16 +51,21 @@ public class Browser {
             return instances.get(path);
     }
 
-    public List<MediaFile> listFiles(String path) throws IOException {
+    public List<Media> listFiles(String path) throws IOException {
         NfsFile dir = new NfsFile(ctx, path);
         NfsFile[] files = dir.listFiles();
-        List<MediaFile> list = new ArrayList<>();
+        List<Media> list = new ArrayList<>();
         for (NfsFile file:files) {
             System.out.println(" Add " + file.getName());
             if (!file.getName().startsWith(".")) {
-                MediaFile media = new MediaFile(file.getName(), file.getPath(), file.getSize(), file.isFile());
-                media.setCardImagePath(file.getPath() + "/landscape.jpg");
-                media.setBackgroundImagePath(file.getPath() + "/fanart.jpg");
+                Media media;
+                if (file.isFile()) {
+                    media = new MediaFile(file.getName(), file.getPath(), file.getSize());
+                } else {
+                    media = new Media(file.getName(), file.getPath());
+                    media.setCardImagePath(file.getPath() + "/landscape.jpg");
+                    media.setBackgroundImagePath(file.getPath() + "/fanart.jpg");
+                }
                 list.add(media);
             }
         }

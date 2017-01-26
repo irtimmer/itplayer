@@ -1,7 +1,7 @@
 /*
  * This file is part of ITPlayer.
  *
- * Copyright (C) 2016 Iwan Timmer
+ * Copyright (C) 2016, 2017 Iwan Timmer
  *
  * ITPlayer is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,26 +17,28 @@
  * along with ITPlayer; if not, see <http://www.gnu.org/licenses/>.
  */
 
-package nl.itimmer.itplayer;
+package nl.itimmer.itplayer.vfs;
 
 import java.io.Serializable;
 
-public class MediaFile implements Serializable {
+public class Media implements Serializable {
 
     private String name;
     private String path;
-    private long size;
 
     private String cardImagePath;
     private String backgroundImagePath;
 
     private boolean isFile;
 
-    public MediaFile(String name, String path, long size, boolean isFile) {
+    public Media(String name, String path, boolean isFile) {
         this.name = name;
         this.path = path;
         this.isFile = isFile;
-        this.size = size;
+    }
+
+    public Media(String name, String path) {
+        this(name, path, false);
     }
 
     public String getName() {
@@ -45,10 +47,6 @@ public class MediaFile implements Serializable {
 
     public String getPath() {
         return path;
-    }
-
-    public long getSize() {
-        return size;
     }
 
     public boolean isFile() {

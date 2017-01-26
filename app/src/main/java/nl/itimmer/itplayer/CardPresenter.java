@@ -1,7 +1,7 @@
 /*
  * This file is part of ITPlayer.
  *
- * Copyright (C) 2016 Iwan Timmer
+ * Copyright (C) 2016, 2017 Iwan Timmer
  *
  * ITPlayer is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -27,6 +27,7 @@ import android.view.ViewGroup;
 import com.bumptech.glide.Glide;
 
 import nl.itimmer.itplayer.glide.StreamNfsLoader;
+import nl.itimmer.itplayer.vfs.Media;
 
 /*
  * A CardPresenter is used to generate Views and bind Objects to them on demand.
@@ -77,7 +78,7 @@ public class CardPresenter extends Presenter {
 
     @Override
     public void onBindViewHolder(Presenter.ViewHolder viewHolder, Object item) {
-        MediaFile media = (MediaFile) item;
+        Media media = (Media) item;
         ImageCardView cardView = (ImageCardView) viewHolder.view;
 
         Log.d(TAG, "onBindViewHolder");
