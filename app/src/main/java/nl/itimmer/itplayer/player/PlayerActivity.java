@@ -183,7 +183,7 @@ public class PlayerActivity extends Activity implements ExoPlayer.EventListener 
 
                 DataSource.Factory dataSourceFactory = new NfsDataSourceFactory(browser.getContext());
                 ExtractorsFactory extractorsFactory = new DefaultExtractorsFactory();
-                MediaSource videoSource = new ExtractorMediaSource(Uri.parse("nfs://" + media[0].getSize() + "/" + media[0].getPath()), dataSourceFactory, extractorsFactory, null, null);
+                MediaSource videoSource = new ExtractorMediaSource(Uri.parse("nfs://host/" + media[0].getPath()), dataSourceFactory, extractorsFactory, null, null);
 
                 return new MediaSource[]{videoSource};
             } catch (IOException e) {

@@ -29,6 +29,7 @@ import java.io.IOException;
 import java.io.InputStream;
 
 import nl.itimmer.networkfs.nfs.NfsContext;
+import nl.itimmer.networkfs.nfs.NfsFile;
 import nl.itimmer.networkfs.nfs.NfsFileInputStream;
 
 public class NfsDataSourceFactory implements DataSource.Factory {
@@ -47,15 +48,19 @@ public class NfsDataSourceFactory implements DataSource.Factory {
     class NfsDataSource implements DataSource {
 
         private NfsFileInputStream in;
+        private long length;
         private InputStream bin;
 
         private Uri uri;
 
         @Override
         public long open(DataSpec dataSpec) throws IOException {
-            long length = Long.parseLong(dataSpec.uri.getHost());
-            if (in == null)
+            if (in == null) {
+                NfsFile file = new NfsFile(ctx, dataSpec.uri.getPath());
+                length = file.getSize();
+
                 in = new NfsFileInputStream(ctx, dataSpec.uri.getPath());
+            }
 
             in.seek(dataSpec.position);
             bin = new BufferedInputStream(in);
