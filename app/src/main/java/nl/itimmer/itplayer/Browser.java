@@ -21,6 +21,7 @@ package nl.itimmer.itplayer;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.WeakHashMap;
 
@@ -33,6 +34,8 @@ public class Browser {
 
     private NfsContext ctx;
     private static WeakHashMap<String, Browser> instances;
+
+    private String[] allowedExtensions = new String[] {"mkv", "mp4"};
 
     protected Browser(String path) throws IOException {
         ctx = new NfsContext();
@@ -52,21 +55,25 @@ public class Browser {
     }
 
     public List<Media> listFiles(String path) throws IOException {
+        List<String> extensions = Arrays.asList(allowedExtensions);
+
         NfsFile dir = new NfsFile(ctx, path);
         NfsFile[] files = dir.listFiles();
         List<Media> list = new ArrayList<>();
         for (NfsFile file:files) {
             System.out.println(" Add " + file.getName());
             if (!file.getName().startsWith(".")) {
-                Media media;
+                Media media = null;
                 if (file.isFile()) {
-                    media = new MediaFile(file.getName(), file.getPath(), file.getSize());
+                    if (extensions.contains(file.getExtension()))
+                        media = new MediaFile(file.getName(), file.getPath(), file.getSize());
                 } else {
                     media = new Media(file.getName(), file.getPath());
                     media.setCardImagePath(file.getPath() + "/landscape.jpg");
                     media.setBackgroundImagePath(file.getPath() + "/fanart.jpg");
                 }
-                list.add(media);
+                if (media != null)
+                    list.add(media);
             }
         }
 
