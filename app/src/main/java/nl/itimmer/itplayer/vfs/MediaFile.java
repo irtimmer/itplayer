@@ -23,6 +23,8 @@ public class MediaFile extends Media {
 
     private long size;
 
+    private String subtitlePath;
+
     public MediaFile(String name, String path, long size) {
         super(name, path, true);
         this.size = size;
@@ -30,5 +32,13 @@ public class MediaFile extends Media {
 
     public long getSize() {
         return size;
+    }
+
+    public void setSubtitlePath(String subtitlePath) {
+        this.subtitlePath = subtitlePath;
+    }
+
+    public String getSubtitlePath() {
+        return subtitlePath;
     }
 }

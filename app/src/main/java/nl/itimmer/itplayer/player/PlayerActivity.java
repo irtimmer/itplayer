@@ -34,6 +34,7 @@ import com.google.android.exoplayer2.DefaultLoadControl;
 import com.google.android.exoplayer2.ExoPlaybackException;
 import com.google.android.exoplayer2.ExoPlayer;
 import com.google.android.exoplayer2.ExoPlayerFactory;
+import com.google.android.exoplayer2.Format;
 import com.google.android.exoplayer2.LoadControl;
 import com.google.android.exoplayer2.SimpleExoPlayer;
 import com.google.android.exoplayer2.Timeline;
@@ -42,29 +43,34 @@ import com.google.android.exoplayer2.extractor.ExtractorsFactory;
 import com.google.android.exoplayer2.source.ExtractorMediaSource;
 import com.google.android.exoplayer2.source.MediaSource;
 import com.google.android.exoplayer2.source.MergingMediaSource;
+import com.google.android.exoplayer2.source.SingleSampleMediaSource;
+import com.google.android.exoplayer2.text.Cue;
+import com.google.android.exoplayer2.text.TextRenderer;
 import com.google.android.exoplayer2.trackselection.AdaptiveVideoTrackSelection;
 import com.google.android.exoplayer2.trackselection.DefaultTrackSelector;
 import com.google.android.exoplayer2.trackselection.TrackSelection;
 import com.google.android.exoplayer2.trackselection.TrackSelector;
-import com.google.android.exoplayer2.ui.SimpleExoPlayerView;
+import com.google.android.exoplayer2.ui.SubtitleView;
 import com.google.android.exoplayer2.upstream.BandwidthMeter;
 import com.google.android.exoplayer2.upstream.DataSource;
 import com.google.android.exoplayer2.upstream.DefaultBandwidthMeter;
+import com.google.android.exoplayer2.util.MimeTypes;
 
 import java.io.IOException;
+import java.util.List;
 
 import nl.itimmer.itplayer.Browser;
 import nl.itimmer.itplayer.Config;
 import nl.itimmer.itplayer.R;
 import nl.itimmer.itplayer.vfs.MediaFile;
 
-public class PlayerActivity extends Activity implements ExoPlayer.EventListener {
+public class PlayerActivity extends Activity implements ExoPlayer.EventListener, TextRenderer.Output {
 
     private static final String TAG = "PlayerActivity";
 
     public static final String MEDIA = "MEDIA";
 
-    private SimpleExoPlayerView videoView;
+    private SubtitleView subtitleView;
     private SimpleExoPlayer player;
     private ExoPlayerGlue glueHelper;
 
@@ -85,6 +91,12 @@ public class PlayerActivity extends Activity implements ExoPlayer.EventListener 
         videoFragment = (VideoFragment) getFragmentManager().findFragmentById(R.id.playback_fragment);
         VideoFragmentGlueHost glueHost = new VideoFragmentGlueHost(videoFragment);
 
+        subtitleView = (SubtitleView) findViewById(R.id.subtitle_view);
+        if (subtitleView != null) {
+            subtitleView.setUserDefaultStyle();
+            subtitleView.setUserDefaultTextSize();
+        }
+
         Handler mainHandler = new Handler();
         BandwidthMeter bandwidthMeter = new DefaultBandwidthMeter();
         TrackSelection.Factory videoTrackSelectionFactory = new AdaptiveVideoTrackSelection.Factory(bandwidthMeter);
@@ -92,6 +104,7 @@ public class PlayerActivity extends Activity implements ExoPlayer.EventListener 
         LoadControl loadControl = new DefaultLoadControl();
         player = ExoPlayerFactory.newSimpleInstance(this, trackSelector, loadControl);
         player.addListener(this);
+        player.setTextOutput(this);
 
         glueHelper = new ExoPlayerGlue(player, this);
         glueHelper.setHost(glueHost);
@@ -174,6 +187,12 @@ public class PlayerActivity extends Activity implements ExoPlayer.EventListener 
 
     }
 
+    @Override
+    public void onCues(List<Cue> cues) {
+        if (subtitleView != null)
+            subtitleView.onCues(cues);
+    }
+
     class SourceTask extends AsyncTask<MediaFile, Void, MediaSource[]> {
 
         @Override
@@ -185,7 +204,13 @@ public class PlayerActivity extends Activity implements ExoPlayer.EventListener 
                 ExtractorsFactory extractorsFactory = new DefaultExtractorsFactory();
                 MediaSource videoSource = new ExtractorMediaSource(Uri.parse("nfs://host/" + media[0].getPath()), dataSourceFactory, extractorsFactory, null, null);
 
-                return new MediaSource[]{videoSource};
+                if (media[0].getSubtitlePath() != null) {
+                    Format subtitleFormat = Format.createTextSampleFormat(null, MimeTypes.APPLICATION_SUBRIP, null, Format.NO_VALUE, Format.NO_VALUE, "en", null);
+                    MediaSource subtitleSource = new SingleSampleMediaSource(Uri.parse("nfs://host/" + media[0].getSubtitlePath()), dataSourceFactory, subtitleFormat, Long.MAX_VALUE, 0);
+
+                    return new MediaSource[]{videoSource, subtitleSource};
+                } else
+                    return new MediaSource[]{videoSource};
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -196,7 +221,7 @@ public class PlayerActivity extends Activity implements ExoPlayer.EventListener 
         @Override
         protected void onPostExecute(MediaSource... sources) {
             if (sources != null) {
-                player.prepare(new MergingMediaSource(sources));
+                player.prepare(sources.length == 1 ? sources[0] : new MergingMediaSource(sources));
                 player.setPlayWhenReady(true);
             }
         }

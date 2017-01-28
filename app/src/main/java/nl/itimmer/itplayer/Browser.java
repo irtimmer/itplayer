@@ -65,8 +65,13 @@ public class Browser {
             if (!file.getName().startsWith(".")) {
                 Media media = null;
                 if (file.isFile()) {
-                    if (extensions.contains(file.getExtension()))
-                        media = new MediaFile(file.getName(), file.getPath(), file.getSize());
+                    if (extensions.contains(file.getExtension())) {
+                        String name = file.getName().substring(0, file.getName().length() - file.getExtension().length() - 1);
+                        media = new MediaFile(name, file.getPath(), file.getSize());
+                        String subtitleName = name + ".srt";
+                        if (containsFile(files, subtitleName))
+                            ((MediaFile) media).setSubtitlePath(path + "/" + subtitleName);
+                    }
                 } else {
                     media = new Media(file.getName(), file.getPath());
                     media.setCardImagePath(file.getPath() + "/landscape.jpg");
@@ -78,6 +83,14 @@ public class Browser {
         }
 
         return list;
+    }
+
+    private boolean containsFile(NfsFile[] list, String subtitleName) {
+        for (NfsFile file:list) {
+            if (file.getName().equals(subtitleName))
+                return true;
+        }
+        return false;
     }
 
     public NfsContext getContext() {
