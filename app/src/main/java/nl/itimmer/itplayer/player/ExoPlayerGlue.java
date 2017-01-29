@@ -50,14 +50,19 @@ public class ExoPlayerGlue extends PlaybackControlGlue implements ExoPlayer.Even
 
     private Handler handler;
 
+    private int speed;
+    private PlaybackSpeedTask playbackSpeed;
+
     public ExoPlayerGlue(SimpleExoPlayer player, MappingTrackSelector trackSelector, Context context) {
-        super(context, new int[] {PLAYBACK_SPEED_NORMAL});
+        super(context, new int[] {PLAYBACK_SPEED_FAST_L0, PLAYBACK_SPEED_FAST_L1, PLAYBACK_SPEED_FAST_L2, PLAYBACK_SPEED_FAST_L3, PLAYBACK_SPEED_FAST_L4});
         handler = new Handler();
 
         this.player = player;
         this.trackSelector = trackSelector;
         player.addListener(this);
         trackSelector.addListener(this);
+
+        playbackSpeed = new PlaybackSpeedTask();
     }
 
     @Override
@@ -92,12 +97,12 @@ public class ExoPlayerGlue extends PlaybackControlGlue implements ExoPlayer.Even
 
     @Override
     public long getSupportedActions() {
-        return ACTION_PLAY_PAUSE;
+        return ACTION_PLAY_PAUSE | ACTION_FAST_FORWARD | ACTION_REWIND;
     }
 
     @Override
     public int getCurrentSpeedId() {
-        return player.getPlayWhenReady() ? PLAYBACK_SPEED_NORMAL : PLAYBACK_SPEED_PAUSED;
+        return player.getPlayWhenReady() ? speed : PLAYBACK_SPEED_PAUSED;
     }
 
     @Override
@@ -107,6 +112,13 @@ public class ExoPlayerGlue extends PlaybackControlGlue implements ExoPlayer.Even
 
     @Override
     public void play(int speed) {
+        this.speed = speed;
+        handler.removeCallbacks(playbackSpeed);
+        if (speed < 0 || speed > 1) {
+            handler.postDelayed(playbackSpeed, 0);
+            System.out.println("Set speed " + speed);
+        }
+
         player.setPlayWhenReady(true);
     }
 
@@ -212,5 +224,29 @@ public class ExoPlayerGlue extends PlaybackControlGlue implements ExoPlayer.Even
         boolean status = trackSelector.getRendererDisabled(textRenderIndex);
         closedCaptionAction.setIndex(status ? PlaybackControlsRow.ClosedCaptioningAction.ON : PlaybackControlsRow.ClosedCaptioningAction.OFF);
         primaryActionsAdapter.notifyArrayItemRangeChanged(primaryActionsAdapter.indexOf(closedCaptionAction), 1);
+    }
+
+    class PlaybackSpeedTask implements Runnable {
+
+        public int getPlayPeriod() {
+            //TODO better method to calculate play period
+            return 1000;
+        }
+
+        public int getSeekPeriod() {
+            int rate = speed > 0 ? speed - 8 : speed + 8;
+            return (rate * getPlayPeriod()) - getPlayPeriod();
+        }
+
+        @Override
+        public void run() {
+            if (speed < 0 || speed > 1) {
+                player.seekTo(player.getCurrentWindowIndex(), player.getCurrentPosition() + getSeekPeriod());
+                if (player.getCurrentPosition() > 0)
+                    handler.postDelayed(this, getPlayPeriod());
+                else
+                    play(PLAYBACK_SPEED_NORMAL);
+            }
+        }
     }
 }
