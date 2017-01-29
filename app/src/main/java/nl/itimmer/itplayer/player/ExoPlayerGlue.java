@@ -1,7 +1,7 @@
 /*
  * This file is part of ITPlayer.
  *
- * Copyright (C) 2016 Iwan Timmer
+ * Copyright (C) 2016, 2017 Iwan Timmer
  *
  * ITPlayer is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,25 +25,39 @@ import android.os.Handler;
 import android.support.v17.leanback.media.PlaybackControlGlue;
 import android.support.v17.leanback.media.PlaybackGlueHost;
 import android.support.v17.leanback.media.SurfaceHolderGlueHost;
+import android.support.v17.leanback.widget.Action;
+import android.support.v17.leanback.widget.PlaybackControlsRow;
+import android.support.v17.leanback.widget.SparseArrayObjectAdapter;
 import android.view.SurfaceHolder;
 
+import com.google.android.exoplayer2.C;
 import com.google.android.exoplayer2.ExoPlaybackException;
 import com.google.android.exoplayer2.ExoPlayer;
 import com.google.android.exoplayer2.SimpleExoPlayer;
 import com.google.android.exoplayer2.Timeline;
+import com.google.android.exoplayer2.trackselection.MappingTrackSelector;
+import com.google.android.exoplayer2.trackselection.TrackSelections;
+import com.google.android.exoplayer2.trackselection.TrackSelector;
 
-public class ExoPlayerGlue extends PlaybackControlGlue implements ExoPlayer.EventListener, SurfaceHolder.Callback, Runnable {
+public class ExoPlayerGlue extends PlaybackControlGlue implements ExoPlayer.EventListener, SurfaceHolder.Callback, Runnable, TrackSelector.EventListener<MappingTrackSelector.MappedTrackInfo> {
+
+    private SparseArrayObjectAdapter primaryActionsAdapter;
+
+    private PlaybackControlsRow.ClosedCaptioningAction closedCaptionAction;
 
     private SimpleExoPlayer player;
+    private MappingTrackSelector trackSelector;
 
     private Handler handler;
 
-    public ExoPlayerGlue(SimpleExoPlayer player, Context context) {
+    public ExoPlayerGlue(SimpleExoPlayer player, MappingTrackSelector trackSelector, Context context) {
         super(context, new int[] {PLAYBACK_SPEED_NORMAL});
         handler = new Handler();
 
         this.player = player;
+        this.trackSelector = trackSelector;
         player.addListener(this);
+        trackSelector.addListener(this);
     }
 
     @Override
@@ -118,6 +132,35 @@ public class ExoPlayerGlue extends PlaybackControlGlue implements ExoPlayer.Even
     }
 
     @Override
+    protected void onCreatePrimaryActions(SparseArrayObjectAdapter primaryActionsAdapter) {
+        this.primaryActionsAdapter = primaryActionsAdapter;
+
+        closedCaptionAction = new PlaybackControlsRow.ClosedCaptioningAction(getContext());
+        closedCaptionAction.setIndex(PlaybackControlsRow.ClosedCaptioningAction.ON);
+
+        primaryActionsAdapter.notifyArrayItemRangeChanged(primaryActionsAdapter.indexOf(closedCaptionAction), 1);
+
+        primaryActionsAdapter.set(ACTION_CUSTOM_RIGHT_FIRST, closedCaptionAction);
+    }
+
+    @Override
+    public void onActionClicked(Action action) {
+        if (action == closedCaptionAction) {
+            int textRenderIndex = getRenderIndex(C.TRACK_TYPE_TEXT);
+            trackSelector.setRendererDisabled(textRenderIndex, !trackSelector.getRendererDisabled(textRenderIndex));
+        } else
+            super.onActionClicked(action);
+    }
+
+    public int getRenderIndex(int renderType) {
+        for (int i = 0; i < player.getRendererCount(); i++) {
+            if (player.getRendererType(i) == renderType)
+                return i;
+        }
+        return -1;
+    }
+
+    @Override
     public void run() {
         updateProgress();
         handler.postDelayed(this, getUpdatePeriod());
@@ -161,5 +204,13 @@ public class ExoPlayerGlue extends PlaybackControlGlue implements ExoPlayer.Even
     @Override
     public void surfaceDestroyed(SurfaceHolder holder) {
         player.setVideoSurfaceHolder(null);
+    }
+
+    @Override
+    public void onTrackSelectionsChanged(TrackSelections<? extends MappingTrackSelector.MappedTrackInfo> trackSelections) {
+        int textRenderIndex = getRenderIndex(C.TRACK_TYPE_TEXT);
+        boolean status = trackSelector.getRendererDisabled(textRenderIndex);
+        closedCaptionAction.setIndex(status ? PlaybackControlsRow.ClosedCaptioningAction.ON : PlaybackControlsRow.ClosedCaptioningAction.OFF);
+        primaryActionsAdapter.notifyArrayItemRangeChanged(primaryActionsAdapter.indexOf(closedCaptionAction), 1);
     }
 }

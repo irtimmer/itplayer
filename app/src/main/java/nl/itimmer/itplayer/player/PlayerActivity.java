@@ -1,7 +1,7 @@
 /*
  * This file is part of ITPlayer.
  *
- * Copyright (C) 2016 Iwan Timmer
+ * Copyright (C) 2016, 2017 Iwan Timmer
  *
  * ITPlayer is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -48,8 +48,8 @@ import com.google.android.exoplayer2.text.Cue;
 import com.google.android.exoplayer2.text.TextRenderer;
 import com.google.android.exoplayer2.trackselection.AdaptiveVideoTrackSelection;
 import com.google.android.exoplayer2.trackselection.DefaultTrackSelector;
+import com.google.android.exoplayer2.trackselection.MappingTrackSelector;
 import com.google.android.exoplayer2.trackselection.TrackSelection;
-import com.google.android.exoplayer2.trackselection.TrackSelector;
 import com.google.android.exoplayer2.ui.SubtitleView;
 import com.google.android.exoplayer2.upstream.BandwidthMeter;
 import com.google.android.exoplayer2.upstream.DataSource;
@@ -100,13 +100,13 @@ public class PlayerActivity extends Activity implements ExoPlayer.EventListener,
         Handler mainHandler = new Handler();
         BandwidthMeter bandwidthMeter = new DefaultBandwidthMeter();
         TrackSelection.Factory videoTrackSelectionFactory = new AdaptiveVideoTrackSelection.Factory(bandwidthMeter);
-        TrackSelector trackSelector = new DefaultTrackSelector(mainHandler, videoTrackSelectionFactory);
+        MappingTrackSelector trackSelector = new DefaultTrackSelector(mainHandler, videoTrackSelectionFactory);
         LoadControl loadControl = new DefaultLoadControl();
         player = ExoPlayerFactory.newSimpleInstance(this, trackSelector, loadControl);
         player.addListener(this);
         player.setTextOutput(this);
 
-        glueHelper = new ExoPlayerGlue(player, this);
+        glueHelper = new ExoPlayerGlue(player, trackSelector, this);
         glueHelper.setHost(glueHost);
 
         session = new MediaSession(this, "ITPlayer");
